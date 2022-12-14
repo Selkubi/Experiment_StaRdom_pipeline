@@ -28,7 +28,7 @@ write.csv(eem_metatemplate(Samples, absorbance), file="metatable.csv", row.names
 meta <- read.table("metatable.csv", header = TRUE, sep = ",", dec = ".", row.names=1)
 
 ### Check for problematic samples
-problem <- eem_checkdata(eem_list=Samples, absorbance=absorbance, metadata=meta, error=T)
+problem <- eem_checkdata(eem_list=Samples, absorbance=absorbance, metadata=meta, error=FALSE)
 
 #Absorbance baseline correction
 absorbance <- abs_blcor(absorbance,wlrange = c(680,700))
@@ -37,7 +37,7 @@ eem_list <- eem_extend2largest(Samples, interpolation = 1, extend = FALSE)
 eem_raman_area(eem_list, blanks_only = T, average=F)
 
 eem_list <- eem_remove_blank(eem_list)
-eem_overview_plot(eem_list, spp=9, contour = TRUE)
+eem_overview_plot(eem_list[10:18], spp=9, contour = TRUE)
 
 eem_list <- eem_ife_correction(eem_list,absorbance, cuvl = 2)
 
@@ -58,7 +58,7 @@ eem_overview_plot(eem_list[], spp=9, contour = TRUE)
 eem_list <- eem_interp(eem_list, cores = cores, type = 1, extend = FALSE)
 
 eem4peaks <- eem_smooth(eem_list, n = 4, cores = cores)
-eem_overview_plot(eem_list, spp=9, contour = TRUE)
+eem_overview_plot(eem_list, spp=9, contour = TRUE, cores=core)
 
 bix <- eem_biological_index(eem4peaks)
 coble_peaks <- eem_coble_peaks(eem4peaks)
@@ -79,24 +79,23 @@ abs_params=merge(indices_peaks, slope_parms, by="sample")
 
 list(abs_params, abs_params$sample_date)
 
-for (){
-  
-}
 
 ggplot(abs_params)+
   facet_grid(~sample_date)+
   geom_line(aes(x=col_no, y=bix, group=replicate))
 
-#### PARAFAC analysis ####
+##### PARAFAC analysis #####
+#### Simple models ####
+
 eem_list=eem_red2smallest (eem_list)
 #eem_list %>% 
 # eem_extract(sample = "", keep = TRUE) %>%
 #ggeem(contour = TRUE)
 
 dim_min <- 3
-dim_max <- 7
+dim_max <- 6
 
-nstart <- 25 # number of similar models from which best is chosen
+nstart <- 50 # number of similar models from which best is chosen
 maxit = 5000 # maximum number of iterations in PARAFAC analysis
 ctol <- 10^-6 # tolerance in PARAFAC analysis
 
@@ -111,9 +110,77 @@ pf1n <- eem_parafac(eem_list, comps = seq(dim_min,dim_max), normalise = FALSE, c
 pf1n <- lapply(pf1n, eempf_rescaleBC, newscale = "Fmax")
 eempf_compare(pf1n, contour = TRUE)
 
+# Checkin the correlatino between components (there shouldn't be any components with high correlation)
+eempf_cortable(pf1n[[2]])
+eempf_corplot(pf1n[[5]], progress = FALSE, normalisation = FALSE)
 
+# Calculations with normalized sample data
+pf2n <- eem_parafac(eem_list, comps = seq(dim_min,dim_max), normalise = TRUE, const = c("nonneg", "nonneg", "nonneg"), maxit = maxit, nstart = nstart, ctol = ctol, cores = cores)
+pf2n <- lapply(pf2n, eempf_rescaleBC, newscale = "Fmax")
+eempf_compare(pf2n, contour = TRUE)
 
+#check the correlation
+#normalization can stay False when chekcing the correlation (see the manual for details)
+eempf_corplot(pf2n[[3]], progress = FALSE, normalisation = F)
+
+#### The best model seems to be model 3 (5 component model)
+
+#### Finding and Excluding outliers ####
+# calculate leverage
+cpl <- eempf_leverage(pf2n[[3]])
+
+# plot leverage (nice plot)
+eempf_leverage_plot(cpl, qlabel=0.1)
+#exclude <- eempf_leverage_ident(cpl,qlabel=0.1)
+
+# samples, excitation and emission wavelengths to exclude, makes sense after calculation of leverage
+exclude <- list("ex" = c(),
+                "em" = c(),
+                "sample" = c("S14_I_C1", "S13_I_C3")
+)
+
+# exclude outliers if neccessary. if so, restart analysis
+eem_list_ex <- eem_exclude(eem_list, exclude)
+
+#New model withough the outlilers
+pf3 <- eem_parafac(eem_list_ex, comps = seq(dim_min,dim_max), normalise = TRUE, const = c("uncons", "uncons", "uncons"),maxit = maxit, nstart = nstart, ctol = ctol, cores = cores)
+pf3 <- lapply(pf3, eempf_rescaleBC, newscale = "Fmax")
+eempf_compare(pf3, contour = TRUE)
+
+pf3n <- eem_parafac(eem_list_ex, comps = seq(dim_min,dim_max), normalise = TRUE, const = c("nonneg", "nonneg", "nonneg"), maxit = maxit, nstart = nstart, ctol = ctol, cores = cores)
+pf3n <- lapply(pf3n, eempf_rescaleBC, newscale = "Fmax")
+eempf_compare(pf3n, contour = TRUE)
+
+#Examine Resuduals
+# When examining outliers, keep the excluded samples within the loop
+eempf_residuals_plot(pf3n[[3]], eem_list, residuals_only = TRUE,  spp = 9, cores = cores, contour = TRUE)
+
+# recaluclating the model with higher accuracy. This takes a lot of time, so try to narrow the moedl comp range as much as possible
 ####
+dim_min <- 3
+dim_max <- 6
 
+ctol <- 10^-8 # decrease tolerance in PARAFAC analysis
+nstart = 20 # number of random starts
+maxit = 10000 # increase number of maximum interations
 
+pf4 <- eem_parafac(eem_list_ex, comps = 5, normalise = TRUE, const = c("nonneg", "nonneg", "nonneg"), maxit = maxit, nstart = nstart, ctol = ctol, output = "all", cores = cores, strictly_converging = TRUE)
+pf4p <- lapply(pf4, eempf_rescaleBC, newscale = "Fmax")
+eempf_compare(pf4p, contour = TRUE)
 
+eempf_leverage_plot(eempf_leverage(pf4p[[1]])) # [[1]] means the 4th model in the list, 6 component model in that case
+eempf_corplot(pf4p[[1]], progress = FALSE)
+
+eempf_comp_load_plot(pf4[[1]], contour = TRUE)
+eempf_comps3D(pf4p[[1]])
+
+# Final residuals and sample plots
+eempf_residuals_plot(pf4[[1]], eem_list, select = eem_names(eem_list)[10:14], cores = cores, contour = TRUE)
+
+# Split half analysis
+split_half <- splithalf(eem_list_ex, comp=4, normalise = TRUE, rand = FALSE, cores = cores, nstart = nstart, strictly_converging = TRUE, maxit = maxit, ctol = ctol)
+split_half2 <- splithalf(eem_list_ex, comp=5, normalise = TRUE, rand = FALSE, cores = cores, nstart = nstart, strictly_converging = TRUE, maxit = maxit, ctol = ctol)
+
+splithalf_plot(split_half)
+
+# $ component model is better than 5 so better stick to this?
