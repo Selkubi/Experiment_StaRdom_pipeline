@@ -85,10 +85,13 @@ abs_params=merge(indices_peaks, slope_parms, by="sample")
 
 list(abs_params, abs_params$sample_date)
 
-
+#For quick plotting of the wanted indices to see some trends use the code below
 ggplot(abs_params)+
   facet_grid(~sample_date)+
   geom_line(aes(x=col_no, y=bix, group=replicate))
+
+# Take the optical indice data out
+write.csv(abs_params, file="absorbance_indices.csv", row.names=T)
 
 ##### PARAFAC analysis #####
 #### Simple models ####
@@ -109,7 +112,6 @@ ctol <- 10^-6 # tolerance in PARAFAC analysis
 pf1 <- eem_parafac(eem_list, comps = seq(dim_min,dim_max), normalise = FALSE, const = c("uncons", "uncons", "uncons"), maxit = maxit, nstart = nstart, ctol = ctol, cores = cores)
 pf1 <- lapply(pf1, eempf_rescaleBC, newscale = "Fmax")
 eempf_compare(pf1, contour = TRUE)
-
 
 # same model but using non-negative constraints
 pf1n <- eem_parafac(eem_list, comps = seq(dim_min,dim_max), normalise = FALSE, const = c("nonneg", "nonneg", "nonneg"), maxit = maxit, nstart = nstart, ctol = ctol, cores = cores)
