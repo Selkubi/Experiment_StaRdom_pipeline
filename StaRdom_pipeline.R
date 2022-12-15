@@ -12,7 +12,7 @@ for (i in seq_along(Samples)) {
 #eem_overview_plot(Samples, spp=9, contour = TRUE)
 Samples[[1]][["x"]]
 
-# THis takes the name of the folders in the Hitachi folder, then I pasted it in the path of the absorbance files
+# THis takes the name of the folders in the Hitachi folder, then I pasted it as the path of the absorbance files
 BiblioDir = list.dirs(path = "Hitachi", full.names = TRUE, recursive = FALSE)
 abs=list.files(path=BiblioDir, pattern=".DX")
 
@@ -35,14 +35,20 @@ absorbance <- abs_blcor(absorbance,wlrange = c(680,700))
 
 eem_list <- eem_extend2largest(Samples, interpolation = 1, extend = FALSE)
 eem_raman_area(eem_list, blanks_only = T, average=F)
-
+# There is 1 blank with a very low area, so we discard that
+exclude <- list("ex" = c(),
+                "em" = c(),
+                "sample" = c("S13_Blank_002")
+)
+eem_list <- eem_exclude(eem_list, exclude)
+# Remove the rest of the blankc from the list
 eem_list <- eem_remove_blank(eem_list)
-eem_overview_plot(eem_list[10:18], spp=9, contour = TRUE)
+eem_overview_plot(eem_list[1:9], spp=9, contour = TRUE)
 
 eem_list <- eem_ife_correction(eem_list,absorbance, cuvl = 2)
 
 eem_list<- eem_raman_normalisation2(eem_list, blank = "blank")
-eem_overview_plot(eem_list, spp=9, contour = TRUE)
+eem_overview_plot(eem_list[1:9], spp=9, contour = TRUE)
 
 #remove balnks from the sample list
 eem_list <- eem_extract(eem_list, c("blank"),ignore_case = TRUE)
@@ -53,19 +59,19 @@ remove_scatter <- c(TRUE, TRUE, TRUE, TRUE)
 remove_scatter_width <- c(40,10,10,10)
 
 eem_list <- eem_rem_scat(eem_list, remove_scatter = remove_scatter, remove_scatter_width = remove_scatter_width)
-eem_overview_plot(eem_list[], spp=9, contour = TRUE)
+eem_overview_plot(eem_list[1:9], spp=9, contour = TRUE)
 
 eem_list <- eem_interp(eem_list, cores = cores, type = 1, extend = FALSE)
 
 eem4peaks <- eem_smooth(eem_list, n = 4, cores = cores)
-eem_overview_plot(eem_list, spp=9, contour = TRUE, cores=core)
+eem_overview_plot(eem_list[1], spp=9, contour = TRUE, cores=cores)
 
 bix <- eem_biological_index(eem4peaks)
 coble_peaks <- eem_coble_peaks(eem4peaks)
 fi <- eem_fluorescence_index(eem4peaks)
 hix <- eem_humification_index(eem4peaks, scale = TRUE)
 
-
+# Needs to be converted to base or data.table
 library(tidyverse)
 indices_peaks <- bix %>%
   full_join(coble_peaks, by = "sample") %>%
@@ -112,7 +118,7 @@ eempf_compare(pf1n, contour = TRUE)
 
 # Checkin the correlatino between components (there shouldn't be any components with high correlation)
 eempf_cortable(pf1n[[2]])
-eempf_corplot(pf1n[[5]], progress = FALSE, normalisation = FALSE)
+eempf_corplot(pf1n[[4]], progress = FALSE, normalisation = FALSE)
 
 # Calculations with normalized sample data
 pf2n <- eem_parafac(eem_list, comps = seq(dim_min,dim_max), normalise = TRUE, const = c("nonneg", "nonneg", "nonneg"), maxit = maxit, nstart = nstart, ctol = ctol, cores = cores)
@@ -121,7 +127,7 @@ eempf_compare(pf2n, contour = TRUE)
 
 #check the correlation
 #normalization can stay False when chekcing the correlation (see the manual for details)
-eempf_corplot(pf2n[[3]], progress = FALSE, normalisation = F)
+eempf_corplot(pf2n[[2]], progress = FALSE, normalisation = F)
 
 #### The best model seems to be model 3 (5 component model)
 
@@ -161,7 +167,7 @@ dim_min <- 3
 dim_max <- 6
 
 ctol <- 10^-8 # decrease tolerance in PARAFAC analysis
-nstart = 20 # number of random starts
+nstart = 50 # number of random starts
 maxit = 10000 # increase number of maximum interations
 
 pf4 <- eem_parafac(eem_list_ex, comps = 5, normalise = TRUE, const = c("nonneg", "nonneg", "nonneg"), maxit = maxit, nstart = nstart, ctol = ctol, output = "all", cores = cores, strictly_converging = TRUE)
@@ -179,8 +185,21 @@ eempf_residuals_plot(pf4[[1]], eem_list, select = eem_names(eem_list)[10:14], co
 
 # Split half analysis
 split_half <- splithalf(eem_list_ex, comp=4, normalise = TRUE, rand = FALSE, cores = cores, nstart = nstart, strictly_converging = TRUE, maxit = maxit, ctol = ctol)
-split_half2 <- splithalf(eem_list_ex, comp=5, normalise = TRUE, rand = FALSE, cores = cores, nstart = nstart, strictly_converging = TRUE, maxit = maxit, ctol = ctol)
+split_half2 <- splithalf(eem_list_ex, comp=6, normalise = TRUE, rand = TRUE, cores = cores, nstart = nstart, strictly_converging = TRUE, maxit = maxit, ctol = ctol)
 
 splithalf_plot(split_half)
 
-# $ component model is better than 5 so better stick to this?
+# 4 component model is better than 5 so better stick to this?
+# Tucker’s Congruency Coefficients to see the similiarity of the splits
+tcc_sh_table <- splithalf_tcc(split_half)
+
+tcc_sh_table
+
+# Extra model validation
+corcondia <- eempf_corcondia(pf4[[1]], eem_list_ex)
+
+eemqual <- eempf_eemqual(pf4[[1]], eem_list_ex, split_half, cores = cores)
+
+# Component importance
+varimp <- eempf_varimp(pf4[[1]], eem_list_ex, cores = cores)
+
