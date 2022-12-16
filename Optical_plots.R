@@ -28,6 +28,7 @@ copied_reservoirs$replicate=date_replicates$replicate
 data=rbind(data, copied_reservoirs)
 data$replicate=factor(data$replicate, levels = c("reservoir", "Reservoir","A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"))
 data$col_no=factor(data$col_no, levels = c("Reservoir", "C1", "C2", "C3"))
+write.csv(data, file="Optical_with_correctedReservoirs.csv")
 
 cols = c("bix", "fi", "hix", "SR", "b", "t", "a", "m", "c", "a254", "a300", "E2_E3", "E4_E6", "S275_295", "S350_400")
 data[, paste0(cols, "_median") := lapply(.SD, median, na.rm=T), .SDcols = cols, by=.(sample_date, col_no)]
