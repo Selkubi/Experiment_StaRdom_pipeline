@@ -52,4 +52,20 @@ ggplot()+
 #### End of optical Indice plots
 
  #### PRAFAC component plots ####
-  
+samples=fread("4comp_openfluor-NonNormalized.txt", select=c(1:5))
+emission=fread("4comp_openfluor-NonNormalized.txt", select=c(6:10), nrows=64)
+excitation=fread("4comp_openfluor-NonNormalized.txt", select=c(11:15), nrows=41)
+
+# This was no need to copy the steps above, it just replicates the reservoir samples wince they are on the second table already
+comp_data=samples[data[,.(sample, sample_date,replicate, col_no)], on = .(sample)]
+cols=c("Comp.1", "Comp.2", "Comp.3", "Comp.4")
+comp_data[, paste0(cols, "_median") := lapply(.SD, median, na.rm=T), .SDcols = cols, by=.(sample_date, col_no)]
+
+ggplot(comp_data)+
+  facet_grid(~sample_date)+
+  geom_line(aes(x=col_no, y=Comp.4, group=replicate))+
+  geom_line(aes(x=col_no, y=Comp.4_median, group=sample_date), color="red", lwd=2)
+
+
+
+
