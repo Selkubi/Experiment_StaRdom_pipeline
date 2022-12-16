@@ -52,9 +52,9 @@ ggplot()+
 #### End of optical Indice plots
 
  #### PRAFAC component plots ####
-samples=fread("4comp_openfluor-NonNormalized.txt", select=c(1:5))
-emission=fread("4comp_openfluor-NonNormalized.txt", select=c(6:10), nrows=64)
-excitation=fread("4comp_openfluor-NonNormalized.txt", select=c(11:15), nrows=41)
+samples=fread("4comp-NonNormalized.txt", select=c(1:5))
+emission=fread("4comp-NonNormalized.txt", select=c(6:10), nrows=64)
+excitation=fread("4comp-NonNormalized.txt", select=c(11:15), nrows=41)
 
 # This was no need to copy the steps above, it just replicates the reservoir samples wince they are on the second table already
 comp_data=samples[data[,.(sample, sample_date,replicate, col_no)], on = .(sample)]

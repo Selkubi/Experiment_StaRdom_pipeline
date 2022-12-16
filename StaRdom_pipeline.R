@@ -208,6 +208,7 @@ varimp <- eempf_varimp(pf4[[1]], eem_list_ex, cores = cores)
 ## Export the normalized components, denormalized components and sample loadings
 #Openfluor export
 eempf_openfluor(pf4[[1]], file = "4comp_openfluor-NonNormalized.txt")
+eempf_openfluor(pf4p[[1]], file = "4comp_openfluor-Normalized.txt", Fmax=TRUE)
 eempf_report(pf4[[1]], export = "parafac_report.html", eem_list = eem_list_ex, shmodel = splithalf, performance = TRUE)
-eempf_export(pf4[[1]], export="4comp_openfluor-NonNormalized.txt")
-eempf_export(pf4[[1]], export="4comp_openfluor-Normalized.txt", Fmax=T)
+eempf_export(pf4[[1]], export="4comp-NonNormalized.txt")
+eempf_export(pf4p[[1]], export="4comp-Normalized.txt", Fmax=T)
