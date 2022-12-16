@@ -172,7 +172,7 @@ ctol <- 10^-8 # decrease tolerance in PARAFAC analysis
 nstart = 50 # number of random starts
 maxit = 10000 # increase number of maximum interations
 
-pf4 <- eem_parafac(eem_list_ex, comps = 5, normalise = TRUE, const = c("nonneg", "nonneg", "nonneg"), maxit = maxit, nstart = nstart, ctol = ctol, output = "all", cores = cores, strictly_converging = TRUE)
+pf4 <- eem_parafac(eem_list_ex, comps = 4, normalise = TRUE, const = c("nonneg", "nonneg", "nonneg"), maxit = maxit, nstart = nstart, ctol = ctol, output = "all", cores = cores, strictly_converging = TRUE)
 pf4p <- lapply(pf4, eempf_rescaleBC, newscale = "Fmax")
 eempf_compare(pf4p, contour = TRUE)
 
@@ -189,7 +189,7 @@ eempf_residuals_plot(pf4[[1]], eem_list, select = eem_names(eem_list)[10:14], co
 split_half <- splithalf(eem_list_ex, comp=4, normalise = TRUE, rand = FALSE, cores = cores, nstart = nstart, strictly_converging = TRUE, maxit = maxit, ctol = ctol)
 split_half2 <- splithalf(eem_list_ex, comp=6, normalise = TRUE, rand = TRUE, cores = cores, nstart = nstart, strictly_converging = TRUE, maxit = maxit, ctol = ctol)
 
-splithalf_plot(split_half)
+splithalf_plot(split_half2)
 
 # 4 component model is better than 5 so better stick to this?
 # Tucker’s Congruency Coefficients to see the similiarity of the splits
@@ -205,3 +205,9 @@ eemqual <- eempf_eemqual(pf4[[1]], eem_list_ex, split_half, cores = cores)
 # Component importance
 varimp <- eempf_varimp(pf4[[1]], eem_list_ex, cores = cores)
 
+## Export the normalized components, denormalized components and sample loadings
+#Openfluor export
+eempf_openfluor(pf4[[1]], file = "4comp_openfluor-NonNormalized.txt")
+eempf_report(pf4[[1]], export = "parafac_report.html", eem_list = eem_list_ex, shmodel = splithalf, performance = TRUE)
+eempf_export(pf4[[1]], export="4comp_openfluor-NonNormalized.txt")
+eempf_export(pf4[[1]], export="4comp_openfluor-Normalized.txt", Fmax=T)
