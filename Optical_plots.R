@@ -28,7 +28,25 @@ data=rbind(data, copied_reservoirs)
 data$replicate=factor(data$replicate, levels = c("reservoir", "Reservoir","A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"))
 data$col_no=factor(data$col_no, levels = c("Reservoir", "C1", "C2", "C3"))
 
+cols = c("bix", "fi", "hix", "SR", "b", "t", "a", "m", "c", "a254", "a300", "E2_E3", "E4_E6", "S275_295", "S350_400")
+data[, paste0(cols, "_median") := lapply(.SD, median, na.rm=T), .SDcols = cols, by=.(sample_date, col_no)]
+
+# PLot individual incies to check
 ggplot(data)+
   facet_grid(~sample_date)+
-  geom_line(aes(x=col_no, y=bix, group=replicate))
-# hatayi duzeltmek icin replicate daki reservoir i 4 kre cogaltman lazim
+  geom_line(aes(x=col_no, y=fi, group=replicate))+
+  geom_line(aes(x=col_no, y=fi_median, group=sample_date), color="red", lwd=2)
+
+#facet plots for checking them all
+cols = c("bix", "fi", "hix", "SR", "E2_E3") # add any variable you want from the cols list above
+data_melted=melt(data, id.vars = c("sample", "sample_date", "replicate","col_no"), measure.vars = cols)
+means_melted=melt(data, id.vars = c("sample", "sample_date", "col_no"), measure.vars = paste0(cols, "_median"))
+
+# Check the median or the individual replicated by uncommenting the plot below
+ggplot()+
+  facet_grid(vars(variable), vars(sample_date), scale="free_y")+
+  #geom_line(data=data_melted, aes(x=col_no, y=value, group=replicate))+
+  geom_line(data=means_melted, aes(x=col_no, y=value, group=sample_date), color="red", lwd=1.5)
+ 
+ 
+  
