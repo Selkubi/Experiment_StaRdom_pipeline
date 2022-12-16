@@ -2,6 +2,7 @@ library(data.table)
 library(ggplot2)
 setwd('..')
 
+#### StaRdom Optical Indice plots####
 # Take the data in as data table
 data=data.table(read.delim("absorbance_indices.csv", sep=",", row.names = "X"))
 replicate_columnNo_Check = data[,.SD][replicate=="Reservoir" | replicate=="reservoir"]
@@ -48,5 +49,7 @@ ggplot()+
   #geom_line(data=data_melted, aes(x=col_no, y=value, group=replicate))+
   geom_line(data=means_melted, aes(x=col_no, y=value, group=sample_date), color="red", lwd=1.5)
  
- 
+#### End of optical Indice plots
+
+ #### PRAFAC component plots ####
   
