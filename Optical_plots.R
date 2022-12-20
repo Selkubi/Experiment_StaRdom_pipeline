@@ -64,9 +64,15 @@ comp_data[, paste0(cols, "_median") := lapply(.SD, median, na.rm=T), .SDcols = c
 
 ggplot(comp_data)+
   facet_grid(~sample_date)+
-  geom_line(aes(x=col_no, y=Comp.4, group=replicate))+
-  geom_line(aes(x=col_no, y=Comp.4_median, group=sample_date), color="red", lwd=2)
+  geom_line(aes(x=col_no, y=Comp.2, group=replicate))+
+  geom_line(aes(x=col_no, y=Comp.2_median, group=sample_date), color="red", lwd=2)
 
+sum=unique(comp_data[,-c("repli")])
+
+
+ggplot(unique(comp_data[,-c("replicate", "sample")]))+
+  facet_grid(~col_no, scale="free")+
+  geom_line(aes(x=sample_date, y=Comp.2_median))
 
 
 
