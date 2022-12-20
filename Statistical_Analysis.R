@@ -10,6 +10,7 @@ data$col_no=factor(data$col_no, levels = c("Reservoir", "C1", "C2", "C3"))
 pca_data=unique(data, by="sample")#Exclude the replicated reservoir values for the pca
 
 pca_data[is.na(pca_data)]<-0
+pca_data=pca_data[!sample_date%in%c("S05", "S06")] # Exlude the sample that should not be in the PCA computation
 wine.pca <- prcomp(pca_data[,-c("sample", "replicate","sample_date","col_no", "E4_E6")], scale. = TRUE) 
 summary(wine.pca)
 
@@ -19,7 +20,7 @@ PCAloadings <- data.frame(Variables = rownames(wine.pca$rotation), wine.pca$rota
 
 # Plotting according to the sampling date
 ggplot(pca_data, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
-  geom_point(aes(color=pca_data$sample_date),  size=4)+
+  geom_point(aes(color=pca_data$sample_date, shape=col_no),  size=4)+
   scale_color_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 18)))+
   geom_segment(data = PCAloadings, aes(x = 0, y = 0, xend = (PC1*10), yend = (PC2*10)), arrow = arrow(length = unit(1/2, "picas")),color = "black") +
   annotate("text", x = (PCAloadings$PC1*10.4), y = (PCAloadings$PC2*10.4),
@@ -62,8 +63,11 @@ ggplot(pca_data, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
                inherit.aes=FALSE, arrow = arrow(length = unit(1/2, "picas")),color = "black")
 
 # Faceting according to the sampling date
-ggplot(pca_data, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
+
+ggplot(pca_results, aes(x=PC1 y=PC2))+
   facet_grid(~sample_date, scales="free_y")+
-  geom_point(aes(fill=pca_data$sample_date, shape=col_no),  size=4)+
-  scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 18)))+
+  geom_point(aes(fill=sample_date, shape=col_no),  size=4)+
+  scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 16)))+
   scale_shape_manual(values=c(21,22,23,24))
+# Also try x=PC2 and y =PC1 to see the distance from the reservoir clearly
+
