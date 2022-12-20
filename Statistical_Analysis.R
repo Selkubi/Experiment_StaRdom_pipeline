@@ -49,7 +49,21 @@ ggplot(pca_data, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
   scale_color_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 18)))+
   geom_segment(data = PCAloadings, aes(x = 0, y = 0, xend = (PC1*10), yend = (PC2*10)), 
                inherit.aes=FALSE, arrow = arrow(length = unit(1/2, "picas")),color = "black") +
-  annotate("text", aes(x = (PCAloadings$PC1*10.4), y = (PCAloadings$PC2*10.4), inherit.aes=FALSE),
-           label = PCAloadings$Variables)+
-  theme_classic()+
   guides(fill="legend")
+
+# Plotting the different columns colored accoording to the column
+ggplot(pca_data, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
+  facet_grid(~col_no, scales="free_x")+
+  geom_point(aes(color=sample_date, shape=col_no, fill=sample_date),  size=4)+
+  scale_color_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 18)))+
+  scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 18)))+
+  scale_shape_manual(values=c(21,22,23,24))+
+  geom_segment(data = PCAloadings, aes(x = 0, y = 0, xend = (PC1*10), yend = (PC2*10)), 
+               inherit.aes=FALSE, arrow = arrow(length = unit(1/2, "picas")),color = "black")
+
+# Faceting according to the sampling date
+ggplot(pca_data, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
+  facet_grid(~sample_date, scales="free_y")+
+  geom_point(aes(fill=pca_data$sample_date, shape=col_no),  size=4)+
+  scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 18)))+
+  scale_shape_manual(values=c(21,22,23,24))
