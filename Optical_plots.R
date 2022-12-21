@@ -1,7 +1,6 @@
 library(data.table)
 library(ggplot2)
 setwd('..')
-
 #### StaRdom Optical Indice plots####
 # Take the data in as data table
 data=data.table(read.delim("absorbance_indices.csv", sep=",", row.names = "X"))
@@ -61,18 +60,73 @@ excitation=fread("4comp-NonNormalized.txt", select=c(11:15), nrows=41)
 comp_data=samples[data[,.(sample, sample_date,replicate, col_no)], on = .(sample)]
 cols=c("Comp.1", "Comp.2", "Comp.3", "Comp.4")
 comp_data[, paste0(cols, "_median") := lapply(.SD, median, na.rm=T), .SDcols = cols, by=.(sample_date, col_no)]
+median_values=aggregate(comp_data[,c("Comp.1", "Comp.2", "Comp.3", "Comp.4")], by=comp_data[,c("sample_date", "col_no")], FUN=median, na.rm=T)
 
 ggplot(comp_data)+
   facet_grid(~sample_date)+
   geom_line(aes(x=col_no, y=Comp.2, group=replicate))+
   geom_line(aes(x=col_no, y=Comp.2_median, group=sample_date), color="red", lwd=2)
 
-sum=unique(comp_data[,-c("repli")])
 
-
-ggplot(unique(comp_data[,-c("replicate", "sample")]))+
+# Plot of different components in each column
+ggplot(median_values)+
   facet_grid(~col_no, scale="free")+
-  geom_line(aes(x=sample_date, y=Comp.2_median))
+  geom_line(aes(x=sample_date, y=Comp.1, group=col_no), color="red")+
+  geom_line(aes(x=sample_date, y=Comp.2, group=col_no), color="blue3")+
+  geom_line(aes(x=sample_date, y=Comp.3, group=col_no), color="black")+
+  geom_line(aes(x=sample_date, y=Comp.4, group=col_no), color="green3")+
+  geom_point(aes(x=sample_date, y=Comp.1, group=col_no), color="red")+
+  geom_point(aes(x=sample_date, y=Comp.2, group=col_no), color="blue3")+
+  geom_point(aes(x=sample_date, y=Comp.3, group=col_no), color="black")+
+  geom_point(aes(x=sample_date, y=Comp.4, group=col_no), color="green3")+
+  geom_vline(xintercept = "S10", color="red", linetype="dashed")
+
+DOC_consumption = fread("C:/Users/c7701233/Nextcloud/Column-Experiment/DOC_measurements/DOC_git/Expmeriment_DOC_dataprep/DOC_consumption.csv", drop="V1")
+
+# Correction as 'C consumed per column'
+#Data created from comps and the related corrections
+
+C_correction=rbind(comp_data[DOC_consumption[,.(sample_date, replicate, C1consumed)], C_consumed:=C1consumed, 
+                on=.(replicate=replicate, sample_date=sample_date)][col_no=="C1"],
+      comp_data[DOC_consumption[,.(sample_date, replicate, C2consumed)], C_consumed:=C2consumed, 
+                on=.(replicate=replicate, sample_date=sample_date)][col_no=="C2"],
+      comp_data[DOC_consumption[,.(sample_date, replicate, C3consumed)], C_consumed:=C3consumed, 
+                on=.(replicate=replicate, sample_date=sample_date)][col_no=="C3"])
+C_correction[,c("Comp.1_median","Comp.2_median","Comp.3_median","Comp.4_median"):=NULL]
+
+division=function(Comp,C_consumed){
+  result=Comp/C_consumed
+  return(as.matrix(result))
+}
+
+cols=c("Comp.1", "Comp.2", "Comp.3", "Comp.4")
+C_correction[,paste0(cols, "_corrected"):=lapply(.SD, division, C_consumed=C_correction[,.(C_consumed)]), .SDcols=cols]
+
+# Replot all using the corrected parafac components
 
 
+# This was no need to copy the steps above, it just replicates the reservoir samples wince they are on the second table already
+comp_data=C_correction
+cols=colnames(comp_data)[endsWith(colnames(comp_data), "corrected")]
 
+comp_data[, paste0(cols, "_median") := lapply(.SD, mean, na.rm=T), .SDcols = cols, by=.(sample_date, col_no)]
+median_values=setDT(aggregate(comp_data[, ..cols], by=comp_data[,c("sample_date", "col_no")], FUN=median, na.rm=T))
+
+ggplot(comp_data[!sample_date%in%c("S07", "S06")])+
+  facet_grid(~sample_date)+
+  #geom_line(aes(x=col_no, y=Comp.2_corrected, group=replicate, color=replicate))+
+  geom_line(aes(x=col_no, y=Comp.4_corrected_median, group=sample_date), color="red", lwd=2)
+
+
+# Plot of different components in each column
+ggplot(median_values[!sample_date%in%c("S07", "S06")])+
+  facet_wrap(~col_no, scale="free_y")+
+  geom_line(aes(x=sample_date, y=Comp.1_corrected, group=col_no), color="red")+
+  geom_line(aes(x=sample_date, y=Comp.2_corrected, group=col_no), color="blue3")+
+  geom_line(aes(x=sample_date, y=Comp.3_corrected, group=col_no), color="black")+
+  geom_line(aes(x=sample_date, y=Comp.4_corrected, group=col_no), color="green3")+
+  geom_point(aes(x=sample_date, y=Comp.1_corrected, group=col_no), color="red")+
+  geom_point(aes(x=sample_date, y=Comp.2_corrected, group=col_no), color="blue3")+
+  geom_point(aes(x=sample_date, y=Comp.3_corrected, group=col_no), color="black")+
+  geom_point(aes(x=sample_date, y=Comp.4_corrected, group=col_no), color="green3")+
+  geom_vline(xintercept = "S10", color="red", linetype="dashed")
