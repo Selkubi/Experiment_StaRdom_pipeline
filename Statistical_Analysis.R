@@ -5,7 +5,9 @@ samples=fread("4comp-NonNormalized.txt", select=c(1:5))
 data=fread("Optical_with_correctedReservoirs.csv", drop="V1")
 data$replicate=factor(data$replicate, levels = c("reservoir", "Reservoir","A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"))
 data$col_no=factor(data$col_no, levels = c("Reservoir", "C1", "C2", "C3"))
+data=subset(data, subset=!(sample_date>"S10" & replicate=="O"))
 
+#### PCA with the reservoir samples included ####
 #Merge the tables for the PCA master table
 pca_data=unique(data, by="sample")#Exclude the replicated reservoir values for the pca
 
@@ -15,7 +17,7 @@ wine.pca <- prcomp(pca_data[,-c("sample", "replicate","sample_date","col_no", "E
 summary(wine.pca)
 
 # PCA plots
-#### PCA with automated prcomp calcualted rotations ####
+# PCA with automated prcomp calcualted rotations #
 PCAloadings <- data.frame(Variables = rownames(wine.pca$rotation), wine.pca$rotation)
 
 # Plotting according to the sampling date
@@ -34,14 +36,6 @@ pca_results[, c("sample_date2", "replicate", "col_no2"):=tstrsplit(sample, "_")]
 cols=c("PC1", "PC2")
 pca_results[, paste0(cols, "_median") := lapply(.SD, median, na.rm=T), .SDcols = cols, by=.(sample_date)]
 
-ggplot(pca_results, aes(x=pca_results$PC1_median, y=pca_results$PC2_median))+
-  geom_point(aes(color=pca_data$sample_date),  size=4)+
-  scale_color_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 18)))+
-  geom_segment(data = PCAloadings, aes(x = 0, y = 0, xend = (PC1*10), yend = (PC2*10)), arrow = arrow(length = unit(1/2, "picas")),color = "black") +
-  annotate("text", x = (PCAloadings$PC1*10.4), y = (PCAloadings$PC2*10.4),
-           label = PCAloadings$Variables)+
-  theme_classic()+
-  guides(fill="legend")
 
 # Plotting according to the sampling date with before reversal after reversal facets
 ggplot(pca_data, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
@@ -64,10 +58,78 @@ ggplot(pca_data, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
 
 # Faceting according to the sampling date
 
-ggplot(pca_results, aes(x=PC1 y=PC2))+
+ggplot(pca_results, aes(x=PC1, y=PC2))+
   facet_grid(~sample_date, scales="free_y")+
   geom_point(aes(fill=sample_date, shape=col_no),  size=4)+
   scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 16)))+
   scale_shape_manual(values=c(21,22,23,24))
 # Also try x=PC2 and y =PC1 to see the distance from the reservoir clearly
+#####
+
+#### PCA with mean values and no Reservoir ####
+pca_data=data[col_no!="Reservoir"]
+#pca_data=pca_data[sample_date%in%c("S10","S13", "S16", "S19")]
+pca_data[is.na(pca_data)]<-0
+pca_data=pca_data[!sample_date%in%c("S05", "S06")] # Exlude the sample that should not be in the PCA computation
+
+cols=c("bix", "b", "t","a","m","c","fi","hix","a254", "a300","E2_E3","S275_295", "S350_400","S300_700","SR")
+pca_data_means=data.table(aggregate(select(pca_data, cols), by=pca_data[,c("sample_date", "col_no")], FUN=mean, na.rm=T))
+
+wine.pca <- prcomp(pca_data_means[,!c("sample_date", "col_no")], scale. = TRUE) 
+summary(wine.pca)
+
+# PCA plots
+#### PCA with automated prcomp calcualted rotations ####
+PCAloadings <- data.frame(Variables = rownames(wine.pca$rotation), wine.pca$rotation)
+
+# Plotting according to the sampling date
+ggplot(pca_data_means, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
+  geom_point(aes(color=sample_date, shape=col_no),  size=4)+
+  scale_color_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 16)))+
+  geom_segment(data = PCAloadings, aes(x = 0, y = 0, xend = (PC1*10), yend = (PC2*10)), arrow = arrow(length = unit(1/2, "picas")),color = "black") +
+  annotate("text", x = (PCAloadings$PC1*10.4), y = (PCAloadings$PC2*10.4),
+           label = PCAloadings$Variables)+
+  theme_classic()+
+  guides(fill="legend")
+
+# mean values for each samping date in order to plot spiders or hulls
+pca_results=cbind(pca_data_means,wine.pca$x)
+
+# Faceting according to the sampling date
+ggplot(pca_results, aes(x=PC1, y=PC2))+
+  facet_grid(~sample_date, scales="free_y")+
+  geom_point(aes(fill=sample_date, shape=col_no),  size=4)+
+  scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 16)))+
+  scale_shape_manual(values=c(21,22,23,24))
+# Also try x=PC2 and y =PC1 to see the distance from the reservoir clearly
+####
+library(vegan)
+
+subset_pca=pca_results[sample_date%in%c("S10", "S13", "S16", "S19")]
+
+centroid_S10=t(summary(ordihull(ord=subset_pca[sample_date=="S10"][,c("PC1","PC2")],  display="species",groups=subset_pca[sample_date=="S10"]$col_no)))[,1:2]
+centroid_S14=t(summary(ordihull(ord=subset_pca[sample_date=="S13"][,c("PC1","PC2")],  display="species",groups=subset_pca[sample_date=="S13"]$col_no)))[,1:2]
+centroid_S17=t(summary(ordihull(ord=subset_pca[sample_date=="S16"][,c("PC1","PC2")],  display="species",groups=subset_pca[sample_date=="S16"]$col_no)))[,1:2]
+centroid_S19=t(summary(ordihull(ord=subset_pca[sample_date=="S19"][,c("PC1","PC2")],  display="species",groups=subset_pca[sample_date=="S19"]$col_no)))[,1:2]
+
+# The change from column 1 to column 3 with direction arrows. This is useful to show S19 approaches S09. But the furthest is the S11
+ggplot()+
+  geom_segment(data=data.table(centroid_S10), aes(x=PC1, y=PC2,xend=lead(PC1), yend=lead(PC2)), arrow=arrow(), col="red", lwd=2)+
+  geom_segment(data=data.table(centroid_S14), aes(x=PC1, y=PC2, xend=lead(PC1), yend=lead(PC2)), col="blue", arrow=arrow(),lwd=2)+
+  geom_segment(data=data.table(centroid_S17), aes(x=PC1, y=PC2,xend=lead(PC1), yend=lead(PC2)), arrow=arrow(), col="green", lwd=2)+
+  geom_segment(data=data.table(centroid_S19), aes(x=PC1, y=PC2,xend=lead(PC1), yend=lead(PC2)), arrow=arrow(), col="black", lwd=2)
+
+# There might be an oxygen gradient (or any other environmental variable), so check it from here with the smoth contour curves
+oxygen_sample_data = fread("oxygen_sample_data.csv", dec=",")
+oxygen_sample_mean = aggregate(oxygen_sample_data[,c("Oxygen", "Temp", "Pressure")] , FUN=median, na.rm=T,
+                               by=oxygen_sample_data[,c("Sample_Name", "Column_Number")])
+
+pca_oxygen=pca_results[oxygen_sample_mean, on=.(sample_date=Sample_Name, col_no=Column_Number)][]
+
+hd_v <- envfit(pca_oxygen[,c("PC1", "PC2")] ~ Oxygen, pca_oxygen)
+hd_s <- ordisurf(pca_oxygen[,c("PC1", "PC2")], pca_oxygen$Oxygen, xlim=c(-2,6))
+summary(hd_s)
+plot(hd_v, col="darkgreen", p.max = 0.1)
+ordihull(ord=wine.pca$x[,c(1:2)],  display="sites", label=T, 
+         groups=pca_data_means$sample_date,, show.groups = c("S02", "S08", "S11","S13","S19"))
 
