@@ -40,16 +40,36 @@ ggplot(data)+
 
 #facet plots for checking them all
 cols = c("bix", "fi", "hix", "SR", "E2_E3") # add any variable you want from the cols list above
-data_melted=melt(data, id.vars = c("sample", "sample_date", "replicate","col_no"), measure.vars = cols)
-means_melted=melt(data, id.vars = c("sample", "sample_date", "col_no"), measure.vars = paste0(cols, "_median"))
+data2=data[sample_date%in%c("S08", "S11", "S13","S14", "S19")]
+
+cols = c("bix", "fi", "hix", "SR", "a254",  "E2_E3")
+data_med[, paste0(cols, "_median") := lapply(.SD, median, na.rm=T), .SDcols = cols, by=.(sample_date, col_no)]
+
+data_median=data[, lapply(.SD, median, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
+data_sd=data[,lapply(.SD, sd, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
+
+data_median_melted=reshape2::melt(data_median, 
+                  id.vars = c("sample_date", "col_no"), 
+                  measure.vars =cols)
+data_sd_melted=reshape2::melt(data_sd, 
+                                  id.vars = c("sample_date", "col_no"), 
+                                  measure.vars =cols)
+data_median_melted$sdmin=data_median_melted$value+data_sd_melted$value
+data_median_melted$sdmax=data_median_melted$value-data_sd_melted$value
 
 # Check the median or the individual replicated by uncommenting the plot below
 ggplot()+
-  facet_grid(vars(variable), vars(sample_date), scale="free_y")+
-  #geom_line(data=data_melted, aes(x=col_no, y=value, group=replicate))+
-  geom_line(data=means_melted, aes(x=col_no, y=value, group=sample_date), color="red", lwd=1.5)
- 
-#### End of optical Indice plots
+  facet_wrap(~variable, scale="free")+
+  geom_line(data=data_median_melted, aes(x=col_no, y=value, group=sample_date, color=sample_date), lwd=1.2)+
+  geom_point(data=data_median_melted, aes(x=col_no, y=value, group=sample_date,fill=sample_date, shape=sample_date), size=3)+
+  scale_color_manual(values=c("#5EADD1", "#DB2A2A", "#FFBF1C", "#E0E334", "#001D7A"))+
+  scale_fill_manual(values=c("#5EADD1", "#DB2A2A", "#FFBF1C", "#E0E334", "#001D7A"))+
+  theme(panel.background = element_rect(fill = "white", colour = "grey50"))+
+  scale_shape_manual(values=c(21,22,23,24,25))
+  #geom_errorbar(data=data_median_melted,aes(x=col_no, y=value, ymin=sdmin, ymax=sdmax, color=sample_date), width=.2,position=position_dodge(0.05))
+  
+
+ #### End of optical Indice plots
 
  #### PRAFAC component plots ####
 samples=fread("4comp-NonNormalized.txt", select=c(1:5))
@@ -130,3 +150,4 @@ ggplot(median_values[!sample_date%in%c("S07", "S06")])+
   geom_point(aes(x=sample_date, y=Comp.3_corrected, group=col_no), color="black")+
   geom_point(aes(x=sample_date, y=Comp.4_corrected, group=col_no), color="green3")+
   geom_vline(xintercept = "S10", color="red", linetype="dashed")
+
