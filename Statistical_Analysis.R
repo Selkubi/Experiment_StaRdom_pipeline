@@ -58,32 +58,32 @@ ggplot(pca_data, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
 
 # Faceting according to the sampling date
 
-ggplot(pca_results, aes(x=PC1, y=PC2))+
+ggplot(pca_results[sample_date%in%c("S08", "S11", "S13", "S14", "S19")], aes(x=PC1, y=PC2))+
   facet_grid(~sample_date, scales="free_y")+
-  geom_point(aes(fill=sample_date, shape=col_no),  size=4)+
-  scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 16)))+
+  geom_point(aes(fill=col_no, shape=col_no), alpha=0.7, size=4)+
+  scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 4)))+
   scale_shape_manual(values=c(21,22,23,24))
 # Also try x=PC2 and y =PC1 to see the distance from the reservoir clearly
 #####
 
 #### PCA with mean values and no Reservoir ####
-pca_data=data[col_no!="Reservoir"]
+pca_data2=data[col_no!="Reservoir"]
 #pca_data=pca_data[sample_date%in%c("S10","S13", "S16", "S19")]
-pca_data[is.na(pca_data)]<-0
-pca_data=pca_data[!sample_date%in%c("S05", "S06")] # Exlude the sample that should not be in the PCA computation
+pca_data2[is.na(pca_data2)]<-0
+pca_data2=pca_data2[!sample_date%in%c("S05", "S06")] # Exlude the sample that should not be in the PCA computation
 
 cols=c("bix", "b", "t","a","m","c","fi","hix","a254", "a300","E2_E3","S275_295", "S350_400","S300_700","SR")
-pca_data_means=data.table(aggregate(select(pca_data, cols), by=pca_data[,c("sample_date", "col_no")], FUN=mean, na.rm=T))
+pca_data_means=data.table(aggregate(dplyr::select(pca_data2, cols), by=pca_data2[,c("sample_date", "col_no")], FUN=mean, na.rm=T))
 
-wine.pca <- prcomp(pca_data_means[,!c("sample_date", "col_no")], scale. = TRUE) 
+wine.pca2 <- prcomp(pca_data_means[,!c("sample_date", "col_no")], scale. = TRUE) 
 summary(wine.pca)
 
 # PCA plots
 #### PCA with automated prcomp calcualted rotations ####
-PCAloadings <- data.frame(Variables = rownames(wine.pca$rotation), wine.pca$rotation)
+PCAloadings = data.frame(Variables = rownames(wine.pca$rotation), wine.pca$rotation)
 
 # Plotting according to the sampling date
-ggplot(pca_data_means, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
+ggplot(pca_data_means, aes(x=wine.pca2$x[,1], y=wine.pca2$x[,2]))+
   geom_point(aes(color=sample_date, shape=col_no),  size=4)+
   scale_color_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 16)))+
   geom_segment(data = PCAloadings, aes(x = 0, y = 0, xend = (PC1*10), yend = (PC2*10)), arrow = arrow(length = unit(1/2, "picas")),color = "black") +
@@ -93,19 +93,21 @@ ggplot(pca_data_means, aes(x=wine.pca$x[,1], y=wine.pca$x[,2]))+
   guides(fill="legend")
 
 # mean values for each samping date in order to plot spiders or hulls
-pca_results=cbind(pca_data_means,wine.pca$x)
+pca_results2=cbind(pca_data_means,wine.pca2$x)
 
 # Faceting according to the sampling date
-ggplot(pca_results, aes(x=PC1, y=PC2))+
+ggplot(pca_results2, aes(x=PC1, y=PC2))+
   facet_grid(~sample_date, scales="free_y")+
   geom_point(aes(fill=sample_date, shape=col_no),  size=4)+
   scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 16)))+
   scale_shape_manual(values=c(21,22,23,24))
 # Also try x=PC2 and y =PC1 to see the distance from the reservoir clearly
-####
-library(vegan)
 
+#### Oxygen preliminary ####
+library(vegan)
+library(dplyr)
 subset_pca=pca_results[sample_date%in%c("S10", "S13", "S16", "S19")]
+plot.new()
 
 centroid_S10=t(summary(ordihull(ord=subset_pca[sample_date=="S10"][,c("PC1","PC2")],  display="species",groups=subset_pca[sample_date=="S10"]$col_no)))[,1:2]
 centroid_S14=t(summary(ordihull(ord=subset_pca[sample_date=="S13"][,c("PC1","PC2")],  display="species",groups=subset_pca[sample_date=="S13"]$col_no)))[,1:2]
@@ -132,4 +134,34 @@ summary(hd_s)
 plot(hd_v, col="darkgreen", p.max = 0.1)
 ordihull(ord=wine.pca$x[,c(1:2)],  display="sites", label=T, 
          groups=pca_data_means$sample_date,, show.groups = c("S02", "S08", "S11","S13","S19"))
+### End of oxygen preliminary###
+
+#### Statistical Tests ####
+# Paired t-test for the optical data
+pca_data=unique(data, by="sample")
+#pca_data=data[col_no!="Reservoir"]
+
+subset_data=pca_data[sample_date%in%c("S08", "S11", "S13", "S14", "S16", "S17", "S19") ]
+
+dt=subset_data[, .(mean = mean(bix), sd=sd(bix)), by = .(sample_date,col_no)]
+
+ggpubr::ggboxplot(subset_data, x = "sample_date", y = "bix", 
+          color = "col_no", palette = c("#00AFBB", "#E7B800", "red", "green"),
+          ylab = "bix", xlab = "sample_date")
+
+# Compute the t test after checking normality
+shapiro.test(subset_data$bix)
+t.test(subset_data[sample_date=="S08"]$bix, subset_data[sample_date=="S11"]$bix, paired = TRUE)
+
+# a 2-way anova with 2 factors to separate replicate from sample_date
+res.aov2=aov(bix~sample_date, data=subset_data[col_no=="C3"])
+summary(res.aov2)
+TukeyHSD(res.aov2)
+
+# Manova for testing all the variables at once. 
+lapply(subset_data[,3:6],  shapiro.test)
+
+# a 2-way anova with 2 factors to separate replicate from sample_date
+
+
 
