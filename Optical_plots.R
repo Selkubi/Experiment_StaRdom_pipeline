@@ -43,10 +43,9 @@ cols = c("bix", "fi", "hix", "SR", "E2_E3") # add any variable you want from the
 data2=data[sample_date%in%c("S08", "S11", "S13","S14", "S19")]
 
 cols = c("bix", "fi", "hix", "SR", "a254",  "E2_E3")
-data_med[, paste0(cols, "_median") := lapply(.SD, median, na.rm=T), .SDcols = cols, by=.(sample_date, col_no)]
 
-data_median=data[, lapply(.SD, median, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
-data_sd=data[,lapply(.SD, sd, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
+data_median=data2[, lapply(.SD, median, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
+data_sd=data2[,lapply(.SD, sd, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
 
 data_median_melted=reshape2::melt(data_median, 
                   id.vars = c("sample_date", "col_no"), 
