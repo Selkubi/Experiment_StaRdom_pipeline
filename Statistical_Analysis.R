@@ -76,7 +76,7 @@ cols=c("bix", "b", "t","a","m","c","fi","hix","a254", "a300","E2_E3","S275_295",
 pca_data_means=data.table(aggregate(dplyr::select(pca_data2, cols), by=pca_data2[,c("sample_date", "col_no")], FUN=mean, na.rm=T))
 
 wine.pca2 <- prcomp(pca_data_means[,!c("sample_date", "col_no")], scale. = TRUE) 
-summary(wine.pca)
+summary(wine.pca2)
 
 # PCA plots
 #### PCA with automated prcomp calcualted rotations ####
@@ -106,7 +106,7 @@ ggplot(pca_results2, aes(x=PC1, y=PC2))+
 #### Oxygen preliminary ####
 library(vegan)
 library(dplyr)
-subset_pca=pca_results[sample_date%in%c("S10", "S13", "S16", "S19")]
+subset_pca=pca_results2[sample_date%in%c("S10", "S13", "S16", "S19")]
 plot.new()
 
 centroid_S10=t(summary(ordihull(ord=subset_pca[sample_date=="S10"][,c("PC1","PC2")],  display="species",groups=subset_pca[sample_date=="S10"]$col_no)))[,1:2]
@@ -122,26 +122,25 @@ ggplot()+
   geom_segment(data=data.table(centroid_S19), aes(x=PC1, y=PC2,xend=lead(PC1), yend=lead(PC2)), arrow=arrow(), col="black", lwd=2)
 
 # There might be an oxygen gradient (or any other environmental variable), so check it from here with the smoth contour curves
-oxygen_sample_data = fread("oxygen_sample_data.csv", dec=",")
+oxygen_sample_data = fread("Experiment_StaRdom_pipeline/oxygen_sample_data.csv", dec=",")
 oxygen_sample_mean = aggregate(oxygen_sample_data[,c("Oxygen", "Temp", "Pressure")] , FUN=median, na.rm=T,
                                by=oxygen_sample_data[,c("Sample_Name", "Column_Number")])
 
-pca_oxygen=pca_results[oxygen_sample_mean, on=.(sample_date=Sample_Name, col_no=Column_Number)][]
+pca_oxygen=pca_results2[oxygen_sample_mean, on=.(sample_date=Sample_Name, col_no=Column_Number)][]
 
 hd_v <- envfit(pca_oxygen[,c("PC1", "PC2")] ~ Oxygen, pca_oxygen)
 hd_s <- ordisurf(pca_oxygen[,c("PC1", "PC2")], pca_oxygen$Oxygen, xlim=c(-2,6))
 summary(hd_s)
 plot(hd_v, col="darkgreen", p.max = 0.1)
-ordihull(ord=wine.pca$x[,c(1:2)],  display="sites", label=T, 
-         groups=pca_data_means$sample_date,, show.groups = c("S02", "S08", "S11","S13","S19"))
+ordihull(ord=wine.pca2$x[,c(1:2)],  display="sites", label=T, groups=pca_data_means$sample_date,, show.groups = c("S02", "S08", "S11","S13","S19"))
 ### End of oxygen preliminary###
 
 #### Statistical Tests ####
 # Paired t-test for the optical data
-pca_data=unique(data, by="sample")
-#pca_data=data[col_no!="Reservoir"]
+pca_data3=unique(data, by="sample")
+#pca_data3=data[col_no!="Reservoir"]
 
-subset_data=pca_data[sample_date%in%c("S08", "S11", "S13", "S14", "S16", "S17", "S19") ]
+subset_data=pca_data3[sample_date%in%c("S08", "S11", "S13", "S14", "S16", "S17", "S19") ]
 
 dt=subset_data[, .(mean = mean(bix), sd=sd(bix)), by = .(sample_date,col_no)]
 
@@ -150,7 +149,7 @@ ggpubr::ggboxplot(subset_data, x = "sample_date", y = "bix",
           ylab = "bix", xlab = "sample_date")
 
 # Compute the t test after checking normality
-shapiro.test(subset_data$bix)
+shapiro.test(pca_data$SR)
 t.test(subset_data[sample_date=="S08"]$bix, subset_data[sample_date=="S11"]$bix, paired = TRUE)
 
 # a 2-way anova with 2 factors to separate replicate from sample_date
@@ -159,7 +158,8 @@ summary(res.aov2)
 TukeyHSD(res.aov2)
 
 # Manova for testing all the variables at once. 
-lapply(subset_data[,3:6],  shapiro.test)
+hist(pca_data$SR)
+lapply(subset_data[,2:6],  shapiro.test)
 
 # a 2-way anova with 2 factors to separate replicate from sample_date
 
