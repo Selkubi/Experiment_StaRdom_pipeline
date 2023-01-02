@@ -79,3 +79,25 @@ absorbance_Read=function (absorbance_path, order = TRUE, recursive = TRUE, dec =
   attr(abs_data, "location") <- locations
   abs_data
 }
+
+
+import_fluoromax4_reverse <- function(file) {
+  dat <- fread(file)
+  dat <- dat[-2,]
+  ex <- as.matrix(as.numeric(na.omit(dat[1, -1])))
+  em <- as.matrix(as.numeric(unlist(na.omit(dat[-1,1]))))
+
+  x <- dat[, -1]
+  x <- x[-1, ]
+  x <- matrix(as.numeric(unlist(x, use.names = FALSE)), ncol = 41, byrow = FALSE)
+
+  l <- list(
+    file = file,
+    x = x,
+    ex = ex,
+    em = em
+  )
+  
+  return(l)
+}
+
