@@ -1,8 +1,10 @@
 library(staRdom) # folder
 library(data.table)
 cores <- detectCores(logical = FALSE)
+source("functions_FLEELab.R") # alternate funcitons needed with the data from our current machines
 
 setwd("..")
+
 Samples <- eem_read("Horiba", recursive = TRUE, import_function = "aqualog")
 
 for (i in seq_along(Samples)) {
@@ -20,8 +22,7 @@ write.csv(eem_metatemplate(Samples), file="metatable.csv", row.names=T)
 meta <- read.table("metatable.csv", header = TRUE, sep = ",", dec = ".", row.names=1)
 
 abs=sub(paste0(meta[,2],"/", meta[,1], ".dx"), pattern="Horiba", replacement="Hitachi")
-absorbance <- absorbance_read(abs, package="staRdom") # load csv or txt tables in folder
-names(absorbance)[-1] = c(substr(colnames(absorbance[-1]), 1, stop=nchar(colnames(absorbance[-1]))-3)) 
+absorbance <- absorbance_Read("Hitachi_all", package="staRdom", dec=".", sep=" ", verbose=T) # load .dx tables in folder with the new absorbance_Read funciton
 
 #Auto write a metatable with file locations
 write.csv(eem_metatemplate(Samples, absorbance), file="metatable.csv", row.names=T)
@@ -48,7 +49,7 @@ eem_overview_plot(eem_list[1:9], spp=9, contour = TRUE)
 eem_list <- eem_ife_correction(eem_list,absorbance, cuvl = 2)
 
 eem_list<- eem_raman_normalisation2(eem_list, blank = "blank")
-eem_overview_plot(eem_list[1:9], spp=9, contour = TRUE)
+eem_overview_plot(eem_list[1:27], spp=9, contour = TRUE)
 
 #remove balnks from the sample list
 eem_list <- eem_extract(eem_list, c("blank"),ignore_case = TRUE)
@@ -56,15 +57,34 @@ absorbance <- dplyr::select(absorbance, -matches("nano|miliq|milliq|mq|blank", i
 
 #remove and interpolate scatter
 remove_scatter <- c(TRUE, TRUE, TRUE, TRUE)
-remove_scatter_width <- c(40,10,10,10)
+remove_scatter_width <- c(45,10,10,10)
 
 eem_list <- eem_rem_scat(eem_list, remove_scatter = remove_scatter, remove_scatter_width = remove_scatter_width)
 eem_overview_plot(eem_list[1:9], spp=9, contour = TRUE)
 
+eem_list <- eem_list %>%
+  eem_setNA(sample = c(1:13,189,115), ex = 290, interpolate = FALSE) %>%
+  eem_setNA(sample = c(240), ex = 280, interpolate = FALSE) %>%
+  eem_setNA(sample = c(239), ex = 310, interpolate = FALSE) %>%
+  eem_setNA(sample = c(44), ex = 285, interpolate = FALSE) %>%
+  eem_setNA(sample = c(132), ex = 275, interpolate = FALSE)%>%
+eem_setNA(sample = c(248), ex = c(250,265), interpolate = FALSE) %>%
+eem_setNA(sample = c(173), ex = c(260,280), interpolate = FALSE) %>%
+eem_setNA(sample = c(163,121), ex = c(300), interpolate = FALSE) %>%
+eem_setNA(sample = c(191), ex = c(300,340), interpolate = FALSE) %>%
+eem_setNA(sample = c(94,88), ex = c(260), interpolate = FALSE) %>%
+eem_setNA(sample = c(84,68), ex = c(270), interpolate = FALSE) %>%
+eem_setNA(sample = c(58), ex = c(315), interpolate = FALSE) 
+
+remove_scatter_width <- c(50,10,10,10)
+eem_list2 <- eem_rem_scat(eem_list[c(264,210)], remove_scatter = remove_scatter, remove_scatter_width = remove_scatter_width)
+eem_overview_plot(eem_list2[264], spp=9, contour = TRUE)
+
+
 eem_list <- eem_interp(eem_list, cores = cores, type = 1, extend = FALSE)
 
 eem4peaks <- eem_smooth(eem_list, n = 4, cores = cores)
-eem_overview_plot(eem_list[1], spp=9, contour = TRUE, cores=cores)
+eem_overview_plot(eem_list[c(115,264,210,189,190,194,139,110,83)], spp=9, contour = TRUE, cores=cores)
 
 bix <- eem_biological_index(eem4peaks)
 coble_peaks <- eem_coble_peaks(eem4peaks)
