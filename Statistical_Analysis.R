@@ -66,6 +66,36 @@ ggplot(pca_results[sample_date%in%c("S08", "S11", "S13", "S14", "S19")], aes(x=P
 # Also try x=PC2 and y =PC1 to see the distance from the reservoir clearly
 #####
 
+#### PCA with fewer sampling days with Reservoir ####
+pca_data3=unique(data[sample_date%in% c("S08", "S10", "S11", "S13", "S14", "S17", "S19")], by="sample")
+pca_data3[is.na(pca_data3)]<-0
+
+wine.pca3 <- prcomp(pca_data3[,!c("sample_date", "col_no", "replicate", "sample", "E4_E6")], scale. = TRUE) 
+summary(wine.pca3)
+
+pca_results3=cbind(pca_data3, wine.pca3$x)
+# PCA plots
+#### PCA with automated prcomp calcualted rotations ####
+PCAloadings = data.frame(Variables = rownames(wine.pca3$rotation), wine.pca3$rotation)
+
+# Plotting according to the sampling date
+ggplot(data=pca_results3,aes(x=PC1, y=PC2))+
+  geom_point(aes(color=sample_date, shape=col_no),  size=4)+
+  scale_color_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 16)))+
+  geom_segment(data = PCAloadings, aes(x = 0, y = 0, xend = (PC1*10), yend = (PC2*10)), arrow = arrow(length = unit(1/2, "picas")),color = "black") +
+  annotate("text", x = (PCAloadings$PC1*10.4), y = (PCAloadings$PC2*10.4),
+           label = PCAloadings$Variables)+
+  theme_classic()+
+  guides(fill="legend")
+
+# Faceting according to the sampling date
+ggplot(pca_results3, aes(x=PC1, y=PC2))+
+  facet_grid(~sample_date, scales="free_y")+
+  geom_point(aes(fill=col_no, shape=col_no),  size=4)+
+  scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 4)))+
+  scale_shape_manual(values=c(21,22,23,24))
+# Also try x=PC2 and y =PC1 to see the distance from the reservoir clearly
+
 #### PCA with mean values and no Reservoir ####
 pca_data2=data[col_no!="Reservoir"]
 #pca_data=pca_data[sample_date%in%c("S10","S13", "S16", "S19")]
@@ -79,7 +109,6 @@ wine.pca2 <- prcomp(pca_data_means[,!c("sample_date", "col_no")], scale. = TRUE)
 summary(wine.pca2)
 
 # PCA plots
-#### PCA with automated prcomp calcualted rotations ####
 PCAloadings = data.frame(Variables = rownames(wine.pca$rotation), wine.pca$rotation)
 
 # Plotting according to the sampling date
@@ -102,6 +131,7 @@ ggplot(pca_results2, aes(x=PC1, y=PC2))+
   scale_fill_manual(values=ggthemes::tableau_div_gradient_pal()(seq(0, 1, length = 16)))+
   scale_shape_manual(values=c(21,22,23,24))
 # Also try x=PC2 and y =PC1 to see the distance from the reservoir clearly
+#### End ####
 
 #### Oxygen preliminary ####
 library(vegan)
@@ -137,19 +167,25 @@ ordihull(ord=wine.pca2$x[,c(1:2)],  display="sites", label=T, groups=pca_data_me
 
 #### Statistical Tests ####
 # Paired t-test for the optical data
-pca_data3=unique(data, by="sample")
-#pca_data3=data[col_no!="Reservoir"]
+pca_data3
 
-subset_data=pca_data3[sample_date%in%c("S08", "S11", "S13", "S14", "S16", "S17", "S19") ]
+subset_data=pca_data3
 
-dt=subset_data[, .(mean = mean(bix), sd=sd(bix)), by = .(sample_date,col_no)]
+dt=subset_data[, .(mean = mean(fi), sd=sd(fi)), by = .(sample_date,col_no)]
 
-ggpubr::ggboxplot(subset_data, x = "sample_date", y = "bix", 
+ggpubr::ggboxplot(subset_data, x = "sample_date", y = "fi", 
           color = "col_no", palette = c("#00AFBB", "#E7B800", "red", "green"),
           ylab = "bix", xlab = "sample_date")
 
 # Compute the t test after checking normality
-shapiro.test(pca_data$SR)
+shapiro.test(scale(pca_data[sample_date=="S11"]$SR,center=TRUE,scale=TRUE))
+
+hist(log(pca_data$SR), freq=FALSE)
+qqnorm(pca_data[,SR],main="Normal Q-Q Plot of male");qqline(pca_data[,SR])
+
+zdata<-scale(pca_data[,-c("sample_date", "col_no", "replicate", "sample", "E4_E6")],center=TRUE,scale=TRUE)
+hist(scale(pca_data[sample_date=="S11"]$SR,center=TRUE,scale=TRUE), freq=F)
+
 t.test(subset_data[sample_date=="S08"]$bix, subset_data[sample_date=="S11"]$bix, paired = TRUE)
 
 # a 2-way anova with 2 factors to separate replicate from sample_date
@@ -158,7 +194,7 @@ summary(res.aov2)
 TukeyHSD(res.aov2)
 
 # Manova for testing all the variables at once. 
-hist(pca_data$SR)
+hist(pca_data[m<0.015]$m)
 lapply(subset_data[,2:6],  shapiro.test)
 
 # a 2-way anova with 2 factors to separate replicate from sample_date
