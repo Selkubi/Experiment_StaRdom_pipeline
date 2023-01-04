@@ -183,21 +183,12 @@ shapiro.test(scale(pca_data[sample_date=="S11"]$SR,center=TRUE,scale=TRUE))
 hist(log(pca_data$SR), freq=FALSE)
 qqnorm(pca_data[,SR],main="Normal Q-Q Plot of male");qqline(pca_data[,SR])
 
-zdata<-scale(pca_data[,-c("sample_date", "col_no", "replicate", "sample", "E4_E6")],center=TRUE,scale=TRUE)
-hist(scale(pca_data[sample_date=="S11"]$SR,center=TRUE,scale=TRUE), freq=F)
+#sampling day S08
+day_eight_zdata=pca_data[sample_date=="S08"]
+zdata_<-scale(pca_data[,-c("sample_date", "col_no", "replicate", "sample", "E4_E6")],center=TRUE,scale=TRUE)
 
 t.test(subset_data[sample_date=="S08"]$bix, subset_data[sample_date=="S11"]$bix, paired = TRUE)
 
-# a 2-way anova with 2 factors to separate replicate from sample_date
-res.aov2=aov(bix~sample_date, data=subset_data[col_no=="C3"])
-summary(res.aov2)
-TukeyHSD(res.aov2)
-
-# Manova for testing all the variables at once. 
-hist(pca_data[m<0.015]$m)
-lapply(subset_data[,2:6],  shapiro.test)
-
-# a 2-way anova with 2 factors to separate replicate from sample_date
-
-
-
+subset_data=pca_data3[,c(2:10,12:15,17:20)]
+subset_data[, paste0(names(subset_data)[2:3], ".z") := lapply(.SD, 
+                                                        function(x) as.vector(scale(x, scale=T, center=T))), .(sample_date, col_no)]
