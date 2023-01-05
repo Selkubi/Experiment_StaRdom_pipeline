@@ -13,6 +13,7 @@ date_replicates = unique(data[col_no!=c("Reservoir"), c("replicate", "sample_dat
 
 #To count how many times to replicate for each sampling date
 date_replicates$rep_count=c(1:nrow(date_replicates))
+
 for (i in unique(date_replicates$sample_date)){
   date_replicates[sample_date==i]$rep_count=nrow(date_replicates[sample_date==i])
 }
@@ -39,11 +40,8 @@ ggplot(data)+
   geom_line(aes(x=col_no, y=fi_median, group=sample_date), color="red", lwd=2)
 
 #facet plots for checking them all
-cols = c("bix", "fi", "hix", "SR", "E2_E3") # add any variable you want from the cols list above
-data2=data[sample_date%in%c("S08", "S11", "S13","S14", "S19")]
-
+data2=data[sample_date%in%c("S08", "S11", "S13","S14","S19")]
 cols = c("bix", "fi", "hix", "SR", "a254",  "E2_E3")
-
 data_median=data2[, lapply(.SD, median, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
 data_sd=data2[,lapply(.SD, sd, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
 
@@ -66,9 +64,56 @@ ggplot()+
   theme(panel.background = element_rect(fill = "white", colour = "grey50"))+
   scale_shape_manual(values=c(21,22,23,24,25))
   #geom_errorbar(data=data_median_melted,aes(x=col_no, y=value, ymin=sdmin, ymax=sdmax, color=sample_date), width=.2,position=position_dodge(0.05))
-  
 
- #### End of optical Indice plots
+# Radar plot to observe changes per column before and after reversal
+
+library(ggradar)
+data3=data_median[col_no=="C1"][,c(1,3:8)]
+plotting_data=data3[,paste0(colnames(data3[,c(2:7)]), "_scaled"):=lapply(.SD, FUN=scale, scale=T, center=T), .SDcols=cols][,c(1,8:13)]
+plotting_data$sample_date=c("Control", "Day 1", "Day3", "Day7", "Day17")
+plotting_data$sample_date=factor(plotting_data$sample_date, levels=c("Control", "Day 1", "Day3", "Day7", "Day17"))
+col1=ggradar(plotting_data, 
+        values.radar = c("-1.8", "0", "1.8"),
+        grid.min=-2.4,
+        grid.max=2.4, grid.mid = 0, 
+        axis.labels = cols, fill=T, fill.alpha=0.1, plot.title="Column 1", legend.position = "none")
+
+data3=data_median[col_no=="C2"][,c(1,3:8)]
+plotting_data=data3[,paste0(colnames(data3[,c(2:7)]), "_scaled"):=lapply(.SD, FUN=scale, scale=T, center=T), .SDcols=cols][,c(1,8:13)]
+plotting_data$sample_date=c("Control", "Day 1", "Day3", "Day7", "Day17")
+plotting_data$sample_date=factor(plotting_data$sample_date, levels=c("Control", "Day 1", "Day3", "Day7", "Day17"))
+Col2=ggradar(plotting_data, 
+        values.radar = c("-1.8", "0", "1.8"),
+        grid.min=-2.4,
+        grid.max=2.4, grid.mid = 0, 
+        axis.labels = cols, fill=T, fill.alpha=0.1, plot.title="Column 2", legend.position = "none")
+
+data3=data_median[col_no=="C3"][,c(1,3:8)]
+plotting_data=data3[,paste0(colnames(data3[,c(2:7)]), "_scaled"):=lapply(.SD, FUN=scale, scale=T, center=T), .SDcols=cols][,c(1,8:13)]
+plotting_data$sample_date=c("Control", "Day 1", "Day3", "Day7", "Day17")
+plotting_data$sample_date=factor(plotting_data$sample_date, levels=c("Control", "Day 1", "Day3", "Day7", "Day17"))
+col3=ggradar(plotting_data, 
+        values.radar = c("-1.8", "0", "1.8"),
+        grid.min=-2.4,
+        grid.max=2.4, grid.mid = 0, 
+        axis.labels = cols, fill=T, fill.alpha=0.1, plot.title="Column 3", legend.position = "none")
+
+data3=data_median[,lapply(.SD, FUN= median), .SDcols=cols, by=sample_date]
+plotting_data=data3[,paste0(colnames(data3[,c(2:7)]), "_scaled"):=lapply(.SD, FUN=scale, scale=T, center=T), .SDcols=cols][,c(1,8:13)]
+plotting_data$sample_date=c("Control", "Day 1", "Day3", "Day7", "Day17")
+plotting_data$sample_date=factor(plotting_data$sample_date, levels=c("Control", "Day 1", "Day3", "Day7", "Day17"))
+col_all=ggradar(plotting_data, 
+        values.radar = c("-1.8", "0", "1.8"),
+        grid.min=-2.4,
+        grid.max=2.4, grid.mid = 0, 
+        axis.labels = cols, fill=T, fill.alpha=0.1, plot.title="Whole Column Set", legend.position = "none")
+
+
+legend <- cowplot::get_legend(col1)
+cowplot::plot_grid(col1,Col2,col3,col_all, legend=legend,   ncol=2, nrow = 3, 
+                   layout_matrix = rbind(c(1,2), c(3,4),c(5,5)),
+                   widths = c(5, 5), heights = c(0.1, 2.5, 2.5)) 
+#### End of optical Indice plots
 
  #### PRAFAC component plots ####
 samples=fread("4comp-NonNormalized.txt", select=c(1:5))
