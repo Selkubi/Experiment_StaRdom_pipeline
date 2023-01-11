@@ -40,7 +40,7 @@ ggplot(data)+
   geom_line(aes(x=col_no, y=fi_median, group=sample_date), color="red", lwd=2)
 
 #facet plots for checking them all
-data2=data[sample_date%in%c("S08", "S11", "S13","S14","S19")]
+data2=data[sample_date%in%c("S10", "S13", "S16","S19")]
 cols = c("bix", "fi", "hix", "SR", "a254",  "E2_E3")
 data_median=data2[, lapply(.SD, median, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
 data_sd=data2[,lapply(.SD, sd, na.rm=T), .SDcols = cols, by=c("sample_date", "col_no")]
@@ -54,6 +54,7 @@ data_sd_melted=reshape2::melt(data_sd,
 data_median_melted$sdmin=data_median_melted$value+data_sd_melted$value
 data_median_melted$sdmax=data_median_melted$value-data_sd_melted$value
 
+data_median_melted$sample_date=factor(data_median_melted$sample_date,levels=c("S10", "S13", "S16", "S19"), labels=c("Day0", "Day3", "Day10", "Day17"))
 # Check the median or the individual replicated by uncommenting the plot below
 ggplot()+
   facet_wrap(~variable, scale="free")+
@@ -71,10 +72,9 @@ ggplot()+
   geom_line(data=data_median_melted, aes(x=sample_date, y=value, group=col_no, color=col_no), lwd=1)+
   geom_point(data=data_median_melted, aes(x=sample_date, y=value, group=col_no,fill=col_no, shape=col_no), size=3)+
   scale_color_manual(values=c("#bdd5e1", "#a698cc", "#4e8fc8", "#1741a3"))+
-  scale_fill_manual(values=c("#c6c0da", "#8f86b5", "#575091", "#111f6d"))+
+  scale_fill_manual(values=c("#bdd5e1", "#a698cc", "#4e8fc8", "#1741a3"))+
   theme(panel.background = element_rect(fill = "white", colour = "grey50"))+
   scale_shape_manual(values=c(21,22,23,24,25))
-
 
 # Radar plot to observe changes per column before and after reversal
 
