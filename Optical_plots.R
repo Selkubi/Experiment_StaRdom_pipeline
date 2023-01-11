@@ -65,6 +65,17 @@ ggplot()+
   scale_shape_manual(values=c(21,22,23,24,25))
   #geom_errorbar(data=data_median_melted,aes(x=col_no, y=value, ymin=sdmin, ymax=sdmax, color=sample_date), width=.2,position=position_dodge(0.05))
 
+# boxplot for each sampling day/column
+ggplot()+
+  facet_wrap(~variable, scale="free")+
+  geom_line(data=data_median_melted, aes(x=sample_date, y=value, group=col_no, color=col_no), lwd=1)+
+  geom_point(data=data_median_melted, aes(x=sample_date, y=value, group=col_no,fill=col_no, shape=col_no), size=3)+
+  scale_color_manual(values=c("#bdd5e1", "#a698cc", "#4e8fc8", "#1741a3"))+
+  scale_fill_manual(values=c("#c6c0da", "#8f86b5", "#575091", "#111f6d"))+
+  theme(panel.background = element_rect(fill = "white", colour = "grey50"))+
+  scale_shape_manual(values=c(21,22,23,24,25))
+
+
 # Radar plot to observe changes per column before and after reversal
 
 library(ggradar)
@@ -194,4 +205,5 @@ ggplot(median_values[!sample_date%in%c("S07", "S06")])+
   geom_point(aes(x=sample_date, y=Comp.3_corrected, group=col_no), color="black")+
   geom_point(aes(x=sample_date, y=Comp.4_corrected, group=col_no), color="green3")+
   geom_vline(xintercept = "S10", color="red", linetype="dashed")
+
 
